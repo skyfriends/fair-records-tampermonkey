@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LinkedIn Filter Applied Jobs
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.2
 // @description  Filter LinkedIn jobs: hide applied jobs, non-Easy Apply jobs, and promoted jobs
 // @author       rova_records
 // @match        https://www.linkedin.com/jobs/*
@@ -19,10 +19,12 @@
      * Configuration
      *************************************************************************/
     const STORAGE_KEY_APPLIED = 'linkedin_hide_applied_jobs';
+    const STORAGE_KEY_EASY_APPLY = 'linkedin_hide_easy_apply';
     const STORAGE_KEY_NON_EASY_APPLY = 'linkedin_hide_non_easy_apply';
     const STORAGE_KEY_PROMOTED = 'linkedin_hide_promoted';
 
     let hideApplied = localStorage.getItem(STORAGE_KEY_APPLIED) !== 'false'; // Enabled by default
+    let hideEasyApply = localStorage.getItem(STORAGE_KEY_EASY_APPLY) === 'true'; // Disabled by default
     let hideNonEasyApply = localStorage.getItem(STORAGE_KEY_NON_EASY_APPLY) === 'true'; // Disabled by default
     let hidePromoted = localStorage.getItem(STORAGE_KEY_PROMOTED) === 'true'; // Disabled by default
     let hiddenCount = 0;
@@ -51,8 +53,8 @@
                 }
             }
 
-            // Check 2: Non-Easy Apply (hide jobs that DON'T have Easy Apply)
-            if (!shouldHide && hideNonEasyApply) {
+            // Check 2: Easy Apply status (need to check once for both filters)
+            if (!shouldHide && (hideEasyApply || hideNonEasyApply)) {
                 const footerItems = listing.querySelectorAll('.job-card-container__footer-item');
                 let hasEasyApply = false;
 
@@ -62,7 +64,13 @@
                     }
                 });
 
-                if (!hasEasyApply) {
+                // Hide jobs WITH Easy Apply if that filter is on
+                if (hideEasyApply && hasEasyApply) {
+                    shouldHide = true;
+                }
+
+                // Hide jobs WITHOUT Easy Apply if that filter is on
+                if (hideNonEasyApply && !hasEasyApply) {
                     shouldHide = true;
                 }
             }
@@ -72,7 +80,8 @@
                 const footerItems = listing.querySelectorAll('.job-card-container__footer-item');
 
                 footerItems.forEach(item => {
-                    if (item.textContent.trim() === 'Promoted') {
+                    const text = item.textContent.replace(/\s+/g, ' ').trim();
+                    if (text === 'Promoted' || text.includes('Promoted')) {
                         shouldHide = true;
                     }
                 });
@@ -214,22 +223,37 @@
             }
         );
 
-        // Toggle 2: Hide Non-Easy Apply
-        const easyApplyToggle = createToggleButton(
+        // Toggle 2: Hide Easy Apply
+        const hideEasyApplyToggle = createToggleButton(
+            hideEasyApply ? 'Hide Easy Apply' : 'Hide Easy Apply',
+            hideEasyApply,
+            () => {
+                hideEasyApply = !hideEasyApply;
+                localStorage.setItem(STORAGE_KEY_EASY_APPLY, hideEasyApply);
+                hideEasyApplyToggle.textContent = hideEasyApply ? 'Hide Easy Apply' : 'Hide Easy Apply';
+                hideEasyApplyToggle.style.background = hideEasyApply ? '#10b981' : '#e5e7eb';
+                hideEasyApplyToggle.style.color = hideEasyApply ? 'white' : '#374151';
+                reprocessJobs();
+                showToast(hideEasyApply ? 'Hiding Easy Apply jobs' : 'Showing Easy Apply jobs');
+            }
+        );
+
+        // Toggle 3: Easy Apply Only
+        const easyApplyOnlyToggle = createToggleButton(
             hideNonEasyApply ? 'Easy Apply Only' : 'Easy Apply Only',
             hideNonEasyApply,
             () => {
                 hideNonEasyApply = !hideNonEasyApply;
                 localStorage.setItem(STORAGE_KEY_NON_EASY_APPLY, hideNonEasyApply);
-                easyApplyToggle.textContent = hideNonEasyApply ? 'Easy Apply Only' : 'Easy Apply Only';
-                easyApplyToggle.style.background = hideNonEasyApply ? '#10b981' : '#e5e7eb';
-                easyApplyToggle.style.color = hideNonEasyApply ? 'white' : '#374151';
+                easyApplyOnlyToggle.textContent = hideNonEasyApply ? 'Easy Apply Only' : 'Easy Apply Only';
+                easyApplyOnlyToggle.style.background = hideNonEasyApply ? '#10b981' : '#e5e7eb';
+                easyApplyOnlyToggle.style.color = hideNonEasyApply ? 'white' : '#374151';
                 reprocessJobs();
                 showToast(hideNonEasyApply ? 'Easy Apply only' : 'Showing all jobs');
             }
         );
 
-        // Toggle 3: Hide Promoted
+        // Toggle 4: Hide Promoted
         const promotedToggle = createToggleButton(
             hidePromoted ? 'Hide Promoted' : 'Hide Promoted',
             hidePromoted,
@@ -259,7 +283,8 @@
         counter.textContent = 'Hidden: 0 jobs';
 
         content.appendChild(appliedToggle);
-        content.appendChild(easyApplyToggle);
+        content.appendChild(hideEasyApplyToggle);
+        content.appendChild(easyApplyOnlyToggle);
         content.appendChild(promotedToggle);
         content.appendChild(counter);
 
