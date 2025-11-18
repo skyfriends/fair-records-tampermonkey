@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Feedback Helper - Fast
 // @namespace    http://tampermonkey.net/
-// @version      2.2
+// @version      2.3
 // @description  Fast and efficient auto-fill positive feedback on Discogs order pages + payment reminders
 // @author       rova_records
 // @match        https://www.discogs.com/sell/order/*
@@ -188,6 +188,73 @@ Best regards`;
       }
     } catch (err) {
       console.error('Failed to copy:', err);
+      return false;
+    }
+  }
+
+  // Generate reminder message for sending via Discogs
+  function generateReminderMessage(orderData) {
+    const { orderNumber, total, daysElapsed } = orderData;
+    const daysRemaining = Math.max(0, 4 - daysElapsed);
+
+    if (daysElapsed >= 3) {
+      return `Hi! This is an urgent reminder about Order #${orderNumber} (${total}). It's been ${daysElapsed} day${daysElapsed !== 1 ? 's' : ''} and you have ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} until it's automatically cancelled. Please complete payment immediately to avoid cancellation. Thanks!`;
+    } else {
+      return `Hi! Friendly reminder about Order #${orderNumber} (${total}). It's been ${daysElapsed} day${daysElapsed !== 1 ? 's' : ''} and you have ${daysRemaining} day${daysRemaining !== 1 ? 's' : ''} until it's automatically cancelled. Please complete payment at your earliest convenience. Thank you!`;
+    }
+  }
+
+  // Send reminder message via Discogs messaging
+  async function sendReminderMessage(orderData) {
+    try {
+      // Find "Contact Buyer" link
+      const contactLink = document.querySelector('a[href*="/messages/new"]') ||
+                         Array.from(document.querySelectorAll('a'))
+                           .find(a => a.textContent.toLowerCase().includes('contact'));
+
+      if (!contactLink) {
+        showToast("Contact buyer link not found", 2500);
+        return false;
+      }
+
+      // Click contact buyer link
+      fastClick(contactLink);
+      await wait(randDelay(300, 500));
+
+      // Wait for message textarea
+      const messageArea = await waitForSelector('textarea[name="message"], textarea#message, textarea.message-field', 3000);
+      if (!messageArea) {
+        showToast("Message field not found", 2500);
+        return false;
+      }
+
+      // Fill in the message
+      const message = generateReminderMessage(orderData);
+      messageArea.value = message;
+      messageArea.dispatchEvent(new Event("input", { bubbles: true }));
+      messageArea.dispatchEvent(new Event("change", { bubbles: true }));
+
+      await wait(randDelay(200, 400));
+
+      // Find and click send button
+      const sendBtn = document.querySelector('button[type="submit"]') ||
+                     document.querySelector('input[type="submit"]') ||
+                     Array.from(document.querySelectorAll('button'))
+                       .find(b => b.textContent.toLowerCase().includes('send'));
+
+      if (!sendBtn) {
+        showToast("Send button not found", 2500);
+        return false;
+      }
+
+      await wait(randDelay(150, 300));
+      fastClick(sendBtn);
+
+      showToast("✓ Reminder sent!", 2500);
+      return true;
+
+    } catch (error) {
+      showToast("Error: " + error.message, 3000);
       return false;
     }
   }
@@ -550,10 +617,10 @@ Best regards`;
     });
     infoText.innerHTML = `Order <strong>#${orderNumber}</strong><br>Unpaid for <strong>${daysElapsed} day${daysElapsed !== 1 ? 's' : ''}</strong>`;
 
-    // Copy button
-    const copyBtn = document.createElement("button");
-    copyBtn.textContent = isUrgent ? "Copy Urgent Email" : "Copy Reminder Email";
-    Object.assign(copyBtn.style, {
+    // Send Message button
+    const sendBtn = document.createElement("button");
+    sendBtn.textContent = isUrgent ? "Send Urgent Reminder" : "Send Reminder";
+    Object.assign(sendBtn.style, {
       padding: "10px 12px",
       borderRadius: "6px",
       border: "none",
@@ -562,6 +629,46 @@ Best regards`;
       fontSize: "13px",
       background: isUrgent ? "#ef4444" : "#f59e0b",
       color: "white",
+      transition: "all 0.2s"
+    });
+
+    sendBtn.onclick = async () => {
+      sendBtn.disabled = true;
+      sendBtn.textContent = "Sending...";
+
+      const success = await sendReminderMessage(orderData);
+
+      if (success) {
+        sendBtn.textContent = "✓ Sent!";
+        setTimeout(() => {
+          sendBtn.textContent = isUrgent ? "Send Urgent Reminder" : "Send Reminder";
+          sendBtn.disabled = false;
+        }, 2000);
+      } else {
+        sendBtn.textContent = "Try Again";
+        sendBtn.disabled = false;
+      }
+    };
+
+    sendBtn.onmouseover = () => {
+      sendBtn.style.opacity = "0.9";
+    };
+    sendBtn.onmouseout = () => {
+      sendBtn.style.opacity = "1";
+    };
+
+    // Copy button
+    const copyBtn = document.createElement("button");
+    copyBtn.textContent = isUrgent ? "Copy Urgent Email" : "Copy Reminder Email";
+    Object.assign(copyBtn.style, {
+      padding: "8px 10px",
+      borderRadius: "6px",
+      border: "none",
+      cursor: "pointer",
+      fontWeight: "500",
+      fontSize: "12px",
+      background: isUrgent ? "#fecaca" : "#fed7aa",
+      color: "#333",
       transition: "all 0.2s"
     });
 
@@ -587,7 +694,7 @@ Best regards`;
     };
 
     copyBtn.onmouseover = () => {
-      copyBtn.style.opacity = "0.9";
+      copyBtn.style.opacity = "0.8";
     };
     copyBtn.onmouseout = () => {
       copyBtn.style.opacity = "1";
@@ -617,6 +724,7 @@ Best regards`;
     previewBtn.onmouseout = () => previewBtn.style.background = "#f9f9f9";
 
     content.appendChild(infoText);
+    content.appendChild(sendBtn);
     content.appendChild(copyBtn);
     content.appendChild(previewBtn);
 
