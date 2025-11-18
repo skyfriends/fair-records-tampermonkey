@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LinkedIn Filter Applied Jobs
 // @namespace    http://tampermonkey.net/
-// @version      2.2
+// @version      2.3
 // @description  Filter LinkedIn jobs: hide applied jobs, non-Easy Apply jobs, and promoted jobs
 // @author       rova_records
 // @match        https://www.linkedin.com/jobs/*
@@ -77,14 +77,25 @@
 
             // Check 3: Promoted
             if (!shouldHide && hidePromoted) {
-                const footerItems = listing.querySelectorAll('.job-card-container__footer-item');
-
-                footerItems.forEach(item => {
-                    const text = item.textContent.replace(/\s+/g, ' ').trim();
-                    if (text === 'Promoted' || text.includes('Promoted')) {
+                // Check the entire footer wrapper for "Promoted" text
+                const footerWrapper = listing.querySelector('.job-card-container__footer-wrapper');
+                if (footerWrapper) {
+                    const text = footerWrapper.textContent.replace(/\s+/g, ' ').trim().toLowerCase();
+                    if (text.includes('promoted')) {
                         shouldHide = true;
                     }
-                });
+                }
+
+                // Also check individual footer items as fallback
+                if (!shouldHide) {
+                    const footerItems = listing.querySelectorAll('.job-card-container__footer-item');
+                    footerItems.forEach(item => {
+                        const text = item.textContent.replace(/\s+/g, ' ').trim().toLowerCase();
+                        if (text.includes('promoted')) {
+                            shouldHide = true;
+                        }
+                    });
+                }
             }
 
             // Apply visibility
@@ -157,7 +168,7 @@
 
         // Header
         const header = document.createElement('div');
-        header.textContent = 'LinkedIn Job Filters';
+        header.textContent = 'LinkedIn Job Filters v2.3';
         Object.assign(header.style, {
             padding: '10px 14px',
             background: 'linear-gradient(135deg, #0a66c2, #004182)',
