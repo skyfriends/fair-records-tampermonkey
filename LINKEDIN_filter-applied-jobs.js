@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         LinkedIn Filter Applied Jobs
 // @namespace    http://tampermonkey.net/
-// @version      2.3
+// @version      2.4
 // @description  Filter LinkedIn jobs: hide applied jobs, non-Easy Apply jobs, and promoted jobs
 // @author       rova_records
 // @match        https://www.linkedin.com/jobs/*
@@ -101,12 +101,12 @@
             // Apply visibility
             if (shouldHide) {
                 listing.style.display = 'none';
-                hiddenCount++;
             } else {
                 listing.style.display = '';
             }
         });
 
+        // Count all currently hidden jobs
         updateCounter();
     }
 
@@ -168,7 +168,7 @@
 
         // Header
         const header = document.createElement('div');
-        header.textContent = 'LinkedIn Job Filters v2.3';
+        header.textContent = 'LinkedIn Job Filters v2.4';
         Object.assign(header.style, {
             padding: '10px 14px',
             background: 'linear-gradient(135deg, #0a66c2, #004182)',
@@ -212,7 +212,6 @@
 
         // Helper to reprocess jobs
         function reprocessJobs() {
-            hiddenCount = 0;
             document.querySelectorAll('li.scaffold-layout__list-item').forEach(listing => {
                 delete listing.dataset.appliedProcessed;
             });
@@ -314,6 +313,14 @@
     function updateCounter() {
         const counter = document.getElementById('applied-jobs-counter');
         if (counter) {
+            // Count all currently hidden jobs
+            const allListings = document.querySelectorAll('li.scaffold-layout__list-item');
+            hiddenCount = 0;
+            allListings.forEach(listing => {
+                if (listing.style.display === 'none') {
+                    hiddenCount++;
+                }
+            });
             counter.textContent = `Hidden: ${hiddenCount} job${hiddenCount !== 1 ? 's' : ''}`;
         }
     }
@@ -355,7 +362,12 @@
             if (hiddenCount > 0) {
                 showToast(`Filtered ${hiddenCount} job${hiddenCount !== 1 ? 's' : ''}`);
             }
-        }, 1000);
+
+            // Periodically check for new jobs that might have been missed
+            setInterval(() => {
+                filterJobs();
+            }, 2000);
+        }, 1500);
     }
 
     // Start when DOM is ready
