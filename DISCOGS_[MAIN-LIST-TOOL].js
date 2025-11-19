@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Discogs Listing Helper v9.5 - BETA FIXED
+// @name         Discogs Listing Helper v10.0 - Show Base Listing Details
 // @namespace    http://tampermonkey.net/
-// @version      9.5
-// @description  Fixed 7" single auto-detection for records with format text like "7", 1973" - expanded format collection regex to capture size indicators followed by comma. Previously, only patterns like "7\" inch" were detected, causing singles to default to LP mode.
+// @version      10.0
+// @description  Display competitor listing details (media/sleeve condition and seller name) below base price for all pricing strategies. Shows which listing is being undercut.
 // @author       rova_records
 // @match        https://www.discogs.com/sell/post/*
 // @grant        GM_xmlhttpRequest
@@ -32,9 +32,9 @@
     }
   }
 
-  debugLog("Script initialized - Version 9.5");
+  debugLog("Script initialized - Version 10.0");
   debugLog(
-    'Changes: Fixed 7" single auto-detection for records with format text like "7", 1973" or "7", Styrene". Expanded format collection regex to capture size indicators followed by comma or space, not just specific keywords like "inch". This prevents 7" singles from incorrectly defaulting to LP mode.'
+    'Changes: Now displays competitor listing details (media/sleeve condition and seller name) below base price. Shows which listing is being undercut for all pricing strategies.'
   );
 
   const grades = ["P", "F", "G", "G+", "VG", "VG+", "NM", "M"];
@@ -682,6 +682,9 @@
         let betterSleeveMatchCount = 0;
         let betterConditionCount = 0;
 
+        // Map to store listing details keyed by price (for showing base listing info)
+        const listingDetailsMap = {};
+
         // For debugging, examine the first row in detail
         if (rows.length > 0 && DEBUG) {
           const firstRow = rows[0];
@@ -704,9 +707,10 @@
             continue;
           }
 
-          // NEW: Check if ships from USA
+          // NEW: Check if ships from USA and extract seller name
           const sellerInfo = row.querySelector(".seller_info");
           let isUSA = false;
+          let sellerName = "Unknown Seller";
           if (sellerInfo) {
             const shipsFromText = sellerInfo.innerText || "";
             isUSA =
@@ -715,6 +719,18 @@
                 shipsFromText.includes("USA") ||
                 shipsFromText.includes("U.S.A"));
             debugLog(`Row ${i}: Ships from USA: ${isUSA}`);
+
+            // Extract seller name from the seller_info element
+            const sellerLink = row.querySelector(".seller_info a");
+            if (sellerLink) {
+              sellerName = sellerLink.textContent.trim();
+            } else {
+              // Fallback: try to extract from text before "Ships From"
+              const parts = shipsFromText.split("Ships From:");
+              if (parts.length > 0) {
+                sellerName = parts[0].trim() || "Unknown Seller";
+              }
+            }
           }
 
           // FILTER: Only include USA listings
@@ -1278,6 +1294,16 @@
             row: i,
           };
 
+          // Store listing details in map (keyed by price for easy lookup later)
+          if (!listingDetailsMap[price]) {
+            listingDetailsMap[price] = {
+              price: price,
+              media: listingMediaCondition || "Unknown",
+              sleeve: listingSleeveCondition || "N/A",
+              seller: sellerName,
+            };
+          }
+
           // Always categorize based on actual match types for data collection
           if (mediaMatch) {
             if (sleeveMatch) {
@@ -1566,6 +1592,7 @@
           useBetterSleevePricing,
           useBetterConditionPricing,
           pricingStrategy,
+          minListing: listingDetailsMap[min] || null,
         };
 
         // Handle different pricing modes
@@ -1595,6 +1622,16 @@
             betterConditionCount,
             totalListings
           );
+
+          // Add minListing info to both datasets
+          if (fullConditionData) {
+            fullConditionData.minListing =
+              listingDetailsMap[fullConditionData.min] || null;
+          }
+          if (mediaOnlyData) {
+            mediaOnlyData.minListing =
+              listingDetailsMap[mediaOnlyData.min] || null;
+          }
 
           // Store both for later use
           lastPriceData = {
@@ -2143,6 +2180,14 @@
               )}</div>
             </div>
           </div>
+          ${
+            data.minListing
+              ? `<div style="font-size: 10px; color: #666; margin-bottom: 6px; padding: 4px; background: #f5f5f5; border-radius: 4px;">
+                   📀 ${data.minListing.media} | ${data.minListing.sleeve}<br/>
+                   👤 ${data.minListing.seller}
+                 </div>`
+              : ""
+          }
           <div class="suggested-price-btn" data-price="${
             data.suggested
           }" style="text-align: center; background: linear-gradient(135deg, #83c883, #52b752); color: white; padding: 8px; border-radius: 6px; margin-bottom: 8px; cursor: pointer;">
@@ -2424,6 +2469,14 @@
     sourceInfo.innerHTML = `
         ${strategyIndicator}
         <div><b>🔍 Base Price:</b> $${data.min.toFixed(2)} (USA only)</div>
+        ${
+          data.minListing
+            ? `<div style="font-size: 12px; color: #666; margin-top: 4px; padding-left: 10px;">
+                 📀 <b>Condition:</b> Media ${data.minListing.media} | Sleeve ${data.minListing.sleeve}<br/>
+                 👤 <b>Seller:</b> ${data.minListing.seller}
+               </div>`
+            : ""
+        }
         <div><b>💰 Suggested:</b> $${data.suggested.toFixed(2)}</div>
         ${
           data.useBetterConditionPricing
@@ -3387,7 +3440,7 @@
       `;
     leftContainer.appendChild(
       createCollapsibleBox(
-        "🎵 Record Mode",
+        "🎵 Record Mode (v10.0)",
         modeToggleDiv,
         false,
         "mode-toggle-box"
@@ -3556,7 +3609,7 @@
     // Quick Set box (new, separate box for quick set options)
     container.appendChild(
       createCollapsibleBox(
-        "⚡ Quick Set (v9.5)",
+        "⚡ Quick Set",
         createQuickSetBox(),
         false,
         "quick-set-box"
@@ -3998,7 +4051,7 @@
     panel.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 12px;">Discogs Helper Debug</h3>
         <div id="debug-config-info">
-          <div><b>Version:</b> 9.5-debug</div>
+          <div><b>Version:</b> 10.0-debug</div>
           <div><b>API:</b> Always Enabled</div>
           <div><b>Token:</b> ${config.token.substring(
             0,
