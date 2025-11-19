@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Discogs Listing Helper v10.0 - Show Base Listing Details
+// @name         Discogs Listing Helper v10.1 - Debug Listing Details
 // @namespace    http://tampermonkey.net/
-// @version      10.0
-// @description  Display competitor listing details (media/sleeve condition and seller name) below base price for all pricing strategies. Shows which listing is being undercut.
+// @version      10.1
+// @description  Debug version to troubleshoot listing details display issue.
 // @author       rova_records
 // @match        https://www.discogs.com/sell/post/*
 // @grant        GM_xmlhttpRequest
@@ -32,9 +32,9 @@
     }
   }
 
-  debugLog("Script initialized - Version 10.0");
+  debugLog("Script initialized - Version 10.1");
   debugLog(
-    'Changes: Now displays competitor listing details (media/sleeve condition and seller name) below base price. Shows which listing is being undercut for all pricing strategies.'
+    'Changes: Debug version to troubleshoot listing details display. Added console logging.'
   );
 
   const grades = ["P", "F", "G", "G+", "VG", "VG+", "NM", "M"];
@@ -3453,7 +3453,7 @@
       `;
     leftContainer.appendChild(
       createCollapsibleBox(
-        "🎵 Record Mode (v10.0)",
+        "🎵 Record Mode (v10.1)",
         modeToggleDiv,
         false,
         "mode-toggle-box"
@@ -4064,7 +4064,7 @@
     panel.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 12px;">Discogs Helper Debug</h3>
         <div id="debug-config-info">
-          <div><b>Version:</b> 10.0-debug</div>
+          <div><b>Version:</b> 10.1-debug</div>
           <div><b>API:</b> Always Enabled</div>
           <div><b>Token:</b> ${config.token.substring(
             0,
