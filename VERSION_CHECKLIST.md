@@ -6,6 +6,20 @@ Whenever you make changes to a TamperMonkey script in this repository, you **MUS
 
 ---
 
+## 🤖 FOR CLAUDE CODE: CRITICAL WORKFLOW
+
+**ALWAYS** complete the ENTIRE workflow when making script changes:
+
+1. ✅ Update ALL version numbers (see checklist below)
+2. ✅ Update README.md with changes
+3. ✅ **GIT ADD** all modified files
+4. ✅ **GIT COMMIT** with descriptive message
+5. ✅ **GIT PUSH** to remote repository
+
+**DO NOT** stop after making code changes. The workflow is **NOT COMPLETE** until changes are pushed to GitHub. Users won't receive updates until changes are on the main branch.
+
+---
+
 ## 📋 Version Bump Procedure
 
 ### For: `DISCOGS_[MAIN-LIST-TOOL].js`
@@ -130,6 +144,7 @@ For the **Discogs Listing Helper** script, always update:
 
 Keep this updated with each version:
 
+- **v9.5** - Fixed 7" single auto-detection for format patterns like "7", 1973" - expanded format collection regex
 - **v9.4** - Prioritize size over "Album" keyword, fix 7" Album detection
 - **v9.3** - Expand single detection to all small formats (5-9")
 - **v9.2** - Fix 7-inch single detection with improved regex

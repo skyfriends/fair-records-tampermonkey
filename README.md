@@ -36,9 +36,10 @@ Show album cover thumbnails next to orders on Discogs
 
 ### Listing & Inventory Management
 
-#### **Discogs Listing Helper v9.4 - BETA FIXED** (v9.4)
+#### **Discogs Listing Helper v9.5 - BETA FIXED** (v9.5)
 Intelligent pricing with size-based format detection (5-9" singles) and smart "Album" keyword handling
-- **Latest:** Size detection now takes precedence over "Album" keyword - 7" Albums correctly detected as singles
+- **Latest (v9.5):** Fixed 7" single auto-detection for records with format patterns like "7", 1973" - expanded format collection regex to properly capture all small format sizes (5-9") followed by comma or space
+- Size detection now takes precedence over "Album" keyword - 7" Albums correctly detected as singles
 - Auto-detection for multi-LP box sets, 10" and shellac 78 RPM support
 - Same-media-better-sleeve pricing logic
 - [Install](https://raw.githubusercontent.com/skyfriends/fair-records-tampermonkey/main/DISCOGS_[MAIN-LIST-TOOL].js)

@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         Discogs Listing Helper v9.4 - BETA FIXED
+// @name         Discogs Listing Helper v9.5 - BETA FIXED
 // @namespace    http://tampermonkey.net/
-// @version      9.4
-// @description  Added same-media-better-sleeve pricing logic: Checks for same media + better sleeve matches before better media comparison. Displays pricing strategy label in UI. Fixed auto-detection for multi-LP box sets, added 10" and shellac 78 RPM support.
+// @version      9.5
+// @description  Fixed 7" single auto-detection for records with format text like "7", 1973" - expanded format collection regex to capture size indicators followed by comma. Previously, only patterns like "7\" inch" were detected, causing singles to default to LP mode.
 // @author       rova_records
 // @match        https://www.discogs.com/sell/post/*
 // @grant        GM_xmlhttpRequest
@@ -32,9 +32,9 @@
     }
   }
 
-  debugLog("Script initialized - Version 9.4");
+  debugLog("Script initialized - Version 9.5");
   debugLog(
-    'Changes: Added same-media-better-sleeve pricing logic that checks for same media + better sleeve matches before better media comparison. Pricing strategy label now displayed in UI. Fixed auto-detection for multi-LP box sets, added 10" and shellac 78 RPM support.'
+    'Changes: Fixed 7" single auto-detection for records with format text like "7", 1973" or "7", Styrene". Expanded format collection regex to capture size indicators followed by comma or space, not just specific keywords like "inch". This prevents 7" singles from incorrectly defaulting to LP mode.'
   );
 
   const grades = ["P", "F", "G", "G+", "VG", "VG+", "NM", "M"];
@@ -2841,6 +2841,7 @@
       if (
         text.match(/Format\s*:/i) ||
         text.match(/\b\d+['"\u2019\u201D]?\s*(inch|LP|EP|Single)/i) ||
+        text.match(/\b\d+(\.\d+|½)?['"\u2019\u201D][,\s]/i) ||
         text.match(/\b(45|33|78)\s*RPM/i) ||
         text.match(/\bShellac\b/i)
       ) {
@@ -3555,7 +3556,7 @@
     // Quick Set box (new, separate box for quick set options)
     container.appendChild(
       createCollapsibleBox(
-        "⚡ Quick Set (v9.4)",
+        "⚡ Quick Set (v9.5)",
         createQuickSetBox(),
         false,
         "quick-set-box"
@@ -3997,7 +3998,7 @@
     panel.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 12px;">Discogs Helper Debug</h3>
         <div id="debug-config-info">
-          <div><b>Version:</b> 9.4-debug</div>
+          <div><b>Version:</b> 9.5-debug</div>
           <div><b>API:</b> Always Enabled</div>
           <div><b>Token:</b> ${config.token.substring(
             0,
