@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Discogs Listing Helper v9.3 - BETA FIXED
+// @name         Discogs Listing Helper v9.4 - BETA FIXED
 // @namespace    http://tampermonkey.net/
-// @version      9.3
+// @version      9.4
 // @description  Added same-media-better-sleeve pricing logic: Checks for same media + better sleeve matches before better media comparison. Displays pricing strategy label in UI. Fixed auto-detection for multi-LP box sets, added 10" and shellac 78 RPM support.
 // @author       rova_records
 // @match        https://www.discogs.com/sell/post/*
@@ -32,7 +32,7 @@
     }
   }
 
-  debugLog("Script initialized - Version 9.3");
+  debugLog("Script initialized - Version 9.4");
   debugLog(
     'Changes: Added same-media-better-sleeve pricing logic that checks for same media + better sleeve matches before better media comparison. Pricing strategy label now displayed in UI. Fixed auto-detection for multi-LP box sets, added 10" and shellac 78 RPM support.'
   );
@@ -2904,14 +2904,26 @@
       debugLog("Detected as SINGLE based on EP");
       detectedFormat = "single";
     }
-    // PRIORITY 7: Check for 12" LPs
+    // PRIORITY 7: Check for 12" LPs (physical size and RPM indicators)
     else if (
       combinedText.match(
-        /\b12['"\u2019\u201D]|12\s*inch|12-inch|33\s*⅓|33\.3|33\s*RPM|\bLP\b|\balbum\b|Long\s*Play/i
+        /\b12['"\u2019\u201D]|12\s*inch|12-inch|33\s*⅓|33\.3|33\s*RPM|\bLP\b|Long\s*Play/i
       )
     ) {
-      debugLog('Detected as LP based on 12"/33 RPM/LP/album');
+      debugLog('Detected as LP based on 12"/33 RPM/LP');
       detectedFormat = "lp";
+    }
+    // PRIORITY 8: Check for "album" keyword (lower priority than size-based detection)
+    else if (combinedText.match(/\balbum\b/i)) {
+      // Only treat as LP if we didn't detect a small format (under 10")
+      // This prevents "7" Album" from being misclassified as LP
+      if (!combinedText.match(/\b[5-9](\.\d+|½)?['"\u2019\u201D\u0022]|[5-9](\.\d+|½)?\s*inch/i)) {
+        debugLog('Detected as LP based on "album" keyword (no small format detected)');
+        detectedFormat = "lp";
+      } else {
+        debugLog('Found "album" keyword but small format detected - treating as SINGLE');
+        detectedFormat = "single";
+      }
     }
 
     // Method 4: Check URL for clues (but only if no format detected yet)
@@ -3543,7 +3555,7 @@
     // Quick Set box (new, separate box for quick set options)
     container.appendChild(
       createCollapsibleBox(
-        "⚡ Quick Set (v9.3)",
+        "⚡ Quick Set (v9.4)",
         createQuickSetBox(),
         false,
         "quick-set-box"
@@ -3985,7 +3997,7 @@
     panel.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 12px;">Discogs Helper Debug</h3>
         <div id="debug-config-info">
-          <div><b>Version:</b> 9.3-debug</div>
+          <div><b>Version:</b> 9.4-debug</div>
           <div><b>API:</b> Always Enabled</div>
           <div><b>Token:</b> ${config.token.substring(
             0,
