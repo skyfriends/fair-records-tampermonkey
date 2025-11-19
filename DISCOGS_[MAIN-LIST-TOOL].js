@@ -1302,6 +1302,9 @@
               sleeve: listingSleeveCondition || "N/A",
               seller: sellerName,
             };
+            debugLog(
+              `Row ${i}: Stored listing details for price $${price} - Media: ${listingMediaCondition}, Sleeve: ${listingSleeveCondition}, Seller: ${sellerName}`
+            );
           }
 
           // Always categorize based on actual match types for data collection
@@ -1577,6 +1580,16 @@
           competitionRatio,
           useMediaOnlyFallback,
         });
+
+        // Debug: Show what's in the listingDetailsMap
+        debugLog(
+          "Listing details map keys:",
+          Object.keys(listingDetailsMap).slice(0, 10)
+        );
+        debugLog(
+          `Looking up min price $${min} in map - Found:`,
+          listingDetailsMap[min]
+        );
 
         lastPriceData = {
           min,
