@@ -36,9 +36,9 @@ Show album cover thumbnails next to orders on Discogs
 
 ### Listing & Inventory Management
 
-#### **Discogs Listing Helper v10.2 - Debug Display** (v10.2)
+#### **Discogs Listing Helper v10.3 - Fixed Listing Details** (v10.3)
 Intelligent pricing with size-based format detection (5-9" singles) and smart "Album" keyword handling
-- **Latest (v10.2):** Added display debug logging to see what data reaches the UI rendering code
+- **Latest (v10.3):** FIXED - Now properly displays competitor listing details (media/sleeve condition and seller name) below base price
 - (v10.0): Added competitor listing details display (media/sleeve condition and seller name) below base price
 - Fixed 7" single auto-detection for records with format patterns like "7", 1973"
 - Size detection now takes precedence over "Album" keyword - 7" Albums correctly detected as singles

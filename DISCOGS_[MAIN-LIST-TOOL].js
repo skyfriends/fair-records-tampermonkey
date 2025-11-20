@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Discogs Listing Helper v10.2 - Debug Display
+// @name         Discogs Listing Helper v10.3 - Fixed Listing Details
 // @namespace    http://tampermonkey.net/
-// @version      10.2
+// @version      10.3
 // @description  Debug version to troubleshoot listing details display issue.
 // @author       rova_records
 // @match        https://www.discogs.com/sell/post/*
@@ -32,7 +32,7 @@
     }
   }
 
-  debugLog("Script initialized - Version 10.2");
+  debugLog("Script initialized - Version 10.3");
   debugLog(
     'Changes: Debug version to troubleshoot listing details display. Added console logging.'
   );
@@ -1667,6 +1667,15 @@
             betterConditionCount,
             totalListings
           );
+          // Add listing details for the minimum price
+          if (singleModeData) {
+            singleModeData.minListing =
+              listingDetailsMap[singleModeData.min] || null;
+            debugLog(
+              `Added minListing to singleModeData:`,
+              singleModeData.minListing
+            );
+          }
           lastPriceData = singleModeData;
           updateOverlayPrices(lastPriceData);
         }
@@ -3461,7 +3470,7 @@
       `;
     leftContainer.appendChild(
       createCollapsibleBox(
-        "🎵 Record Mode (v10.2)",
+        "🎵 Record Mode (v10.3)",
         modeToggleDiv,
         false,
         "mode-toggle-box"
@@ -4072,7 +4081,7 @@
     panel.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 12px;">Discogs Helper Debug</h3>
         <div id="debug-config-info">
-          <div><b>Version:</b> 10.2-debug</div>
+          <div><b>Version:</b> 10.3</div>
           <div><b>API:</b> Always Enabled</div>
           <div><b>Token:</b> ${config.token.substring(
             0,
