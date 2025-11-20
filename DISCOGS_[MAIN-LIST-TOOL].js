@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Discogs Listing Helper v11.0 - Goldmine Pricing
+// @name         Discogs Listing Helper v11.1 - Goldmine Pricing
 // @namespace    http://tampermonkey.net/
-// @version      11.0
+// @version      11.1
 // @description  Debug version to troubleshoot listing details display issue.
 // @author       rova_records
 // @match        https://www.discogs.com/sell/post/*
@@ -32,7 +32,7 @@
     }
   }
 
-  debugLog("Script initialized - Version 11.0");
+  debugLog("Script initialized - Version 11.1");
   debugLog(
     'Changes: Debug version to troubleshoot listing details display. Added console logging.'
   );
@@ -2646,6 +2646,7 @@
 
     // Generate dynamic price points
     let pricePoints;
+    let goldminePrices = null; // Will hold {grade, price} objects if using Goldmine
 
     if (data.useBetterConditionPricing && data.minListing && data.selectedMediaCondition) {
       // Use Goldmine degradation pricing
@@ -2663,7 +2664,9 @@
         debugLog("Calculated degraded prices:", degradedPrices);
 
         if (degradedPrices.length > 0) {
-          // Use only the prices from degradation
+          // Store the full degraded prices with grade labels
+          goldminePrices = degradedPrices;
+          // Extract just the prices for compatibility
           pricePoints = degradedPrices.map(p => p.price);
         } else {
           // Fallback to psychological prices if degradation doesn't work
@@ -2705,7 +2708,7 @@
     ];
 
     // Function to create a row of price buttons
-    const createPriceRow = (prices, startIndex) => {
+    const createPriceRow = (prices, startIndex, gradeLabels = null) => {
       const row = document.createElement("div");
       Object.assign(row.style, {
         display: "grid",
@@ -2727,7 +2730,14 @@
           fontWeight: "bold",
           boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
         });
-        priceBtn.innerHTML = `<b>$${price.toFixed(2)}</b>`;
+
+        // Show grade label if using Goldmine pricing
+        if (gradeLabels && gradeLabels[startIndex + index]) {
+          priceBtn.innerHTML = `<div style="font-size: 11px; margin-bottom: 2px;">${gradeLabels[startIndex + index]}</div><b>$${price.toFixed(2)}</b>`;
+        } else {
+          priceBtn.innerHTML = `<b>$${price.toFixed(2)}</b>`;
+        }
+
         priceBtn.onclick = () => {
           setPriceAndSubmit(price);
         };
@@ -2741,9 +2751,15 @@
     const maxButtonsPerRow = 4;
     const totalButtons = Math.min(pricePoints.length, 12); // Max 12 buttons total
 
+    // Prepare grade labels if using Goldmine pricing
+    const gradeLabels = goldminePrices ? goldminePrices.map(p => p.grade) : null;
+
     debugLog(
       `Creating price buttons: ${totalButtons} total buttons from ${pricePoints.length} price points`
     );
+    if (gradeLabels) {
+      debugLog("Using Goldmine grade labels:", gradeLabels);
+    }
 
     // Directly create rows of exactly 4 buttons each
     for (let rowIndex = 0; rowIndex < 3; rowIndex++) {
@@ -2759,7 +2775,7 @@
             rowPrices.length
           } buttons: ${rowPrices.join(", ")}`
         );
-        pricingContainer.appendChild(createPriceRow(rowPrices, startIdx));
+        pricingContainer.appendChild(createPriceRow(rowPrices, startIdx, gradeLabels));
       }
     }
 
@@ -3543,7 +3559,7 @@
       `;
     leftContainer.appendChild(
       createCollapsibleBox(
-        "🎵 Record Mode (v11.0)",
+        "🎵 Record Mode (v11.1)",
         modeToggleDiv,
         false,
         "mode-toggle-box"
@@ -4154,7 +4170,7 @@
     panel.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 12px;">Discogs Helper Debug</h3>
         <div id="debug-config-info">
-          <div><b>Version:</b> 11.0</div>
+          <div><b>Version:</b> 11.1</div>
           <div><b>API:</b> Always Enabled</div>
           <div><b>Token:</b> ${config.token.substring(
             0,

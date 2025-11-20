@@ -36,9 +36,10 @@ Show album cover thumbnails next to orders on Discogs
 
 ### Listing & Inventory Management
 
-#### **Discogs Listing Helper v11.0 - Goldmine Pricing** (v11.0)
+#### **Discogs Listing Helper v11.1 - Goldmine Pricing** (v11.1)
 Intelligent pricing with size-based format detection (5-9" singles) and smart "Album" keyword handling
-- **Latest (v11.0):** Goldmine grading degradation pricing - 50% price reduction per condition step when undercutting better condition listings
+- **Latest (v11.1):** Price buttons now show grade labels (NM, VG+, VG, etc.) when using Goldmine pricing
+- (v11.0): Goldmine grading degradation pricing - 50% price reduction per condition step when undercutting better condition listings
 - Cleaned UI - Removed badges and redundant text, improved listing details formatting
 - Fixed NM/M condition mapping - "Near Mint (NM or M-)" now correctly identified as NM
 - (v10.0): Added competitor listing details display (media/sleeve condition and seller name) below base price
