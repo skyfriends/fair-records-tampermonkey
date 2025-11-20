@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Discogs Listing Helper v10.3 - Fixed Listing Details
+// @name         Discogs Listing Helper v11.0 - Goldmine Pricing
 // @namespace    http://tampermonkey.net/
-// @version      10.3
+// @version      11.0
 // @description  Debug version to troubleshoot listing details display issue.
 // @author       rova_records
 // @match        https://www.discogs.com/sell/post/*
@@ -32,7 +32,7 @@
     }
   }
 
-  debugLog("Script initialized - Version 10.3");
+  debugLog("Script initialized - Version 11.0");
   debugLog(
     'Changes: Debug version to troubleshoot listing details display. Added console logging.'
   );
@@ -1045,15 +1045,8 @@
 
           // IMPROVED: More reliable pattern matching for extracting conditions from listings
           // Order matters - check from most specific to least specific
+          // IMPORTANT: Check NM before M to properly handle "NM or M-"
           const conditionPatterns = [
-            {
-              grade: "M",
-              patterns: [
-                /\bMint\s*\(M\)/i,
-                /\bM\b(?![+-])/i, // M but not M+ or M-
-                /\bMint\b(?!\s*[-])/i, // Mint but not Mint-
-              ],
-            },
             {
               grade: "NM",
               patterns: [
@@ -1061,6 +1054,14 @@
                 /\bNear\s*Mint\b/i,
                 /\bNM\b(?![+])/i, // NM but not NM+
                 /\bM-\b/i,
+              ],
+            },
+            {
+              grade: "M",
+              patterns: [
+                /\bMint\s*\(M\)/i,
+                /\bM\b(?![+-])/i, // M but not M+ or M-
+                /\bMint\b(?!\s*[-])/i, // Mint but not Mint-
               ],
             },
             {
@@ -1606,6 +1607,8 @@
           useBetterConditionPricing,
           pricingStrategy,
           minListing: listingDetailsMap[min] || null,
+          selectedMediaCondition: mediaCondition,
+          selectedSleeveCondition: sleeveCondition,
         };
 
         // Handle different pricing modes
@@ -1671,6 +1674,8 @@
           if (singleModeData) {
             singleModeData.minListing =
               listingDetailsMap[singleModeData.min] || null;
+            singleModeData.selectedMediaCondition = mediaCondition;
+            singleModeData.selectedSleeveCondition = sleeveCondition;
             debugLog(
               `Added minListing to singleModeData:`,
               singleModeData.minListing
@@ -2478,16 +2483,6 @@
       textAlign: "center",
     });
 
-    // Add strategy indicator badge
-    let strategyIndicator = "";
-    if (data.mode === "media-only") {
-      strategyIndicator = `<div style="margin-bottom: 6px;"><span style="background: #9b59b6; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">🎵 MEDIA-ONLY MODE</span></div>`;
-    } else if (data.useBetterConditionPricing) {
-      strategyIndicator = `<div style="margin-bottom: 6px;"><span style="background: #4caf50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">⭐ SMART PRICING</span></div>`;
-    } else if (data.useMediaOnlyFallback) {
-      strategyIndicator = `<div style="margin-bottom: 6px;"><span style="background: #2196f3; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">MEDIA-BASED PRICING</span></div>`;
-    }
-
     debugLog(
       "About to render sourceInfo - data.minListing:",
       data.minListing
@@ -2495,20 +2490,14 @@
     debugLog("Full data object:", data);
 
     sourceInfo.innerHTML = `
-        ${strategyIndicator}
         <div><b>🔍 Base Price:</b> $${data.min.toFixed(2)} (USA only)</div>
         ${
           data.minListing
-            ? `<div style="font-size: 12px; color: #666; margin-top: 4px; padding-left: 10px;">
-                 📀 <b>Condition:</b> Media ${data.minListing.media} | Sleeve ${data.minListing.sleeve}<br/>
-                 👤 <b>Seller:</b> ${data.minListing.seller}
+            ? `<div style="font-size: 12px; color: #666; margin-top: 8px; text-align: left;">
+                 <div style="margin-bottom: 4px;">📀 <b>Media:</b> ${data.minListing.media}</div>
+                 <div style="margin-bottom: 4px;">💿 <b>Sleeve:</b> ${data.minListing.sleeve}</div>
+                 <div>👤 <b>Seller:</b> ${data.minListing.seller}</div>
                </div>`
-            : ""
-        }
-        <div><b>💰 Suggested:</b> $${data.suggested.toFixed(2)}</div>
-        ${
-          data.useBetterConditionPricing
-            ? '<div style="font-size: 12px; color: #4caf50; margin-top: 4px;">Undercutting better condition listings!</div>'
             : ""
         }
       `;
@@ -2608,12 +2597,96 @@
       marginTop: "10px",
     });
 
-    // Generate dynamic price points based on the actual price data
-    const pricePoints = getPsychologicalPricePoints(
-      data.min,
-      data.median,
-      data.suggested
-    );
+    // Helper: Round up to nearest quarter
+    const roundUpToQuarter = (price) => {
+      return Math.ceil(price * 4) / 4;
+    };
+
+    // Helper: Calculate Goldmine degraded prices
+    const calculateGoldminePrices = (basePrice, baseCondition, ourCondition) => {
+      const grades = ["M", "NM", "VG+", "VG", "G+", "G", "F", "P"];
+      const baseIndex = grades.indexOf(baseCondition);
+      const ourIndex = grades.indexOf(ourCondition);
+
+      if (baseIndex === -1 || ourIndex === -1 || ourIndex <= baseIndex) {
+        return [];
+      }
+
+      const prices = [];
+      let currentPrice = basePrice;
+
+      // Start from base condition and degrade down to our condition
+      for (let i = baseIndex; i <= ourIndex; i++) {
+        if (i > baseIndex) {
+          currentPrice = currentPrice * 0.5; // 50% degradation per step
+        }
+        const roundedPrice = roundUpToQuarter(currentPrice);
+        prices.push({
+          grade: grades[i],
+          price: roundedPrice,
+        });
+      }
+
+      return prices;
+    };
+
+    // Helper: Extract grade code from condition string
+    const extractGrade = (conditionString) => {
+      if (!conditionString) return null;
+      // Extract code from parentheses like "Good (G)" -> "G"
+      const match = conditionString.match(/\(([^)]+)\)/);
+      if (match) {
+        const code = match[1];
+        // Handle "NM or M-" -> "NM"
+        if (code === "NM or M-") return "NM";
+        return code;
+      }
+      return null;
+    };
+
+    // Generate dynamic price points
+    let pricePoints;
+
+    if (data.useBetterConditionPricing && data.minListing && data.selectedMediaCondition) {
+      // Use Goldmine degradation pricing
+      const baseCondition = data.minListing.media; // Base listing's condition
+      const ourCondition = extractGrade(data.selectedMediaCondition); // Our selected condition
+
+      debugLog("Using Goldmine pricing degradation", {
+        baseCondition,
+        ourCondition,
+        basePrice: data.min
+      });
+
+      if (baseCondition && ourCondition) {
+        const degradedPrices = calculateGoldminePrices(data.min, baseCondition, ourCondition);
+        debugLog("Calculated degraded prices:", degradedPrices);
+
+        if (degradedPrices.length > 0) {
+          // Use only the prices from degradation
+          pricePoints = degradedPrices.map(p => p.price);
+        } else {
+          // Fallback to psychological prices if degradation doesn't work
+          pricePoints = getPsychologicalPricePoints(
+            data.min,
+            data.median,
+            data.suggested
+          );
+        }
+      } else {
+        pricePoints = getPsychologicalPricePoints(
+          data.min,
+          data.median,
+          data.suggested
+        );
+      }
+    } else {
+      pricePoints = getPsychologicalPricePoints(
+        data.min,
+        data.median,
+        data.suggested
+      );
+    }
 
     // Color gradients for the buttons
     const colors = [
@@ -3470,7 +3543,7 @@
       `;
     leftContainer.appendChild(
       createCollapsibleBox(
-        "🎵 Record Mode (v10.3)",
+        "🎵 Record Mode (v11.0)",
         modeToggleDiv,
         false,
         "mode-toggle-box"
@@ -4081,7 +4154,7 @@
     panel.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 12px;">Discogs Helper Debug</h3>
         <div id="debug-config-info">
-          <div><b>Version:</b> 10.3</div>
+          <div><b>Version:</b> 11.0</div>
           <div><b>API:</b> Always Enabled</div>
           <div><b>Token:</b> ${config.token.substring(
             0,
