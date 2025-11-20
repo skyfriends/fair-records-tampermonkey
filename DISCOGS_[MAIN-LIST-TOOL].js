@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         Discogs Listing Helper v10.1 - Debug Listing Details
+// @name         Discogs Listing Helper v10.2 - Debug Display
 // @namespace    http://tampermonkey.net/
 // @version      10.2
 // @description  Debug version to troubleshoot listing details display issue.
@@ -32,7 +32,7 @@
     }
   }
 
-  debugLog("Script initialized - Version 10.1");
+  debugLog("Script initialized - Version 10.2");
   debugLog(
     'Changes: Debug version to troubleshoot listing details display. Added console logging.'
   );
@@ -3461,7 +3461,7 @@
       `;
     leftContainer.appendChild(
       createCollapsibleBox(
-        "🎵 Record Mode (v10.1)",
+        "🎵 Record Mode (v10.2)",
         modeToggleDiv,
         false,
         "mode-toggle-box"
@@ -4072,7 +4072,7 @@
     panel.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 12px;">Discogs Helper Debug</h3>
         <div id="debug-config-info">
-          <div><b>Version:</b> 10.1-debug</div>
+          <div><b>Version:</b> 10.2-debug</div>
           <div><b>API:</b> Always Enabled</div>
           <div><b>Token:</b> ${config.token.substring(
             0,
