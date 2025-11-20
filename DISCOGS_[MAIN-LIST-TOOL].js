@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Discogs Listing Helper v10.1 - Debug Listing Details
 // @namespace    http://tampermonkey.net/
-// @version      10.1
+// @version      10.2
 // @description  Debug version to troubleshoot listing details display issue.
 // @author       rova_records
 // @match        https://www.discogs.com/sell/post/*
@@ -2479,6 +2479,12 @@
       strategyIndicator = `<div style="margin-bottom: 6px;"><span style="background: #2196f3; color: white; padding: 2px 6px; border-radius: 3px; font-size: 11px;">MEDIA-BASED PRICING</span></div>`;
     }
 
+    debugLog(
+      "About to render sourceInfo - data.minListing:",
+      data.minListing
+    );
+    debugLog("Full data object:", data);
+
     sourceInfo.innerHTML = `
         ${strategyIndicator}
         <div><b>🔍 Base Price:</b> $${data.min.toFixed(2)} (USA only)</div>
@@ -2497,6 +2503,8 @@
             : ""
         }
       `;
+
+    debugLog("sourceInfo.innerHTML after render:", sourceInfo.innerHTML);
     priceDisplay.appendChild(sourceInfo);
 
     // Price grid
