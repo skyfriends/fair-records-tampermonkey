@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Discogs Listing Helper v11.1 - Goldmine Pricing
+// @name         Discogs Listing Helper v11.2 - Goldmine Pricing
 // @namespace    http://tampermonkey.net/
-// @version      11.1
+// @version      11.2
 // @description  Debug version to troubleshoot listing details display issue.
 // @author       rova_records
 // @match        https://www.discogs.com/sell/post/*
@@ -32,9 +32,9 @@
     }
   }
 
-  debugLog("Script initialized - Version 11.1");
+  debugLog("Script initialized - Version 11.2");
   debugLog(
-    'Changes: Debug version to troubleshoot listing details display. Added console logging.'
+    'Changes: Simplified pricing - removed grade labels, showing psychological price range (.99, .49) from suggested to degraded minimum.'
   );
 
   const grades = ["P", "F", "G", "G+", "VG", "VG+", "NM", "M"];
@@ -2644,19 +2644,57 @@
       return null;
     };
 
+    // Helper: Generate psychological price range
+    const generatePriceRange = (maxPrice, minPrice) => {
+      const prices = [];
+      const minimum = Math.max(0.99, minPrice); // Never go below $0.99
+
+      // Start from suggested price and work down
+      let currentPrice = maxPrice;
+
+      // Add prices in a psychological pattern
+      while (currentPrice >= minimum) {
+        prices.push(currentPrice);
+
+        // Determine next price based on current price
+        if (currentPrice > 10) {
+          currentPrice = Math.floor(currentPrice - 1) + 0.99; // $1 decrements with .99
+        } else if (currentPrice > 3) {
+          currentPrice = currentPrice - 1; // $1 decrements
+        } else if (currentPrice > 1.50) {
+          currentPrice = currentPrice - 0.50; // $0.50 decrements
+        } else {
+          currentPrice = currentPrice - 0.50; // $0.50 decrements
+        }
+
+        // Round to 2 decimals
+        currentPrice = Math.round(currentPrice * 100) / 100;
+
+        // Ensure we don't go below minimum
+        if (currentPrice < minimum) {
+          if (!prices.includes(minimum)) {
+            prices.push(minimum);
+          }
+          break;
+        }
+      }
+
+      return prices.filter(p => p >= minimum);
+    };
+
     // Generate dynamic price points
     let pricePoints;
-    let goldminePrices = null; // Will hold {grade, price} objects if using Goldmine
 
     if (data.useBetterConditionPricing && data.minListing && data.selectedMediaCondition) {
-      // Use Goldmine degradation pricing
-      const baseCondition = data.minListing.media; // Base listing's condition
-      const ourCondition = extractGrade(data.selectedMediaCondition); // Our selected condition
+      // Use Goldmine-based pricing range
+      const baseCondition = data.minListing.media;
+      const ourCondition = extractGrade(data.selectedMediaCondition);
 
-      debugLog("Using Goldmine pricing degradation", {
+      debugLog("Using Goldmine-based price range", {
         baseCondition,
         ourCondition,
-        basePrice: data.min
+        basePrice: data.min,
+        suggested: data.suggested
       });
 
       if (baseCondition && ourCondition) {
@@ -2664,12 +2702,14 @@
         debugLog("Calculated degraded prices:", degradedPrices);
 
         if (degradedPrices.length > 0) {
-          // Store the full degraded prices with grade labels
-          goldminePrices = degradedPrices;
-          // Extract just the prices for compatibility
-          pricePoints = degradedPrices.map(p => p.price);
+          // Get the lowest Goldmine price (our condition)
+          const lowestGoldmine = degradedPrices[degradedPrices.length - 1].price;
+
+          // Generate range from suggested down to lowest Goldmine price
+          pricePoints = generatePriceRange(data.suggested, lowestGoldmine);
+
+          debugLog("Generated price range:", pricePoints);
         } else {
-          // Fallback to psychological prices if degradation doesn't work
           pricePoints = getPsychologicalPricePoints(
             data.min,
             data.median,
@@ -2751,15 +2791,9 @@
     const maxButtonsPerRow = 4;
     const totalButtons = Math.min(pricePoints.length, 12); // Max 12 buttons total
 
-    // Prepare grade labels if using Goldmine pricing
-    const gradeLabels = goldminePrices ? goldminePrices.map(p => p.grade) : null;
-
     debugLog(
       `Creating price buttons: ${totalButtons} total buttons from ${pricePoints.length} price points`
     );
-    if (gradeLabels) {
-      debugLog("Using Goldmine grade labels:", gradeLabels);
-    }
 
     // Directly create rows of exactly 4 buttons each
     for (let rowIndex = 0; rowIndex < 3; rowIndex++) {
@@ -2775,7 +2809,7 @@
             rowPrices.length
           } buttons: ${rowPrices.join(", ")}`
         );
-        pricingContainer.appendChild(createPriceRow(rowPrices, startIdx, gradeLabels));
+        pricingContainer.appendChild(createPriceRow(rowPrices, startIdx));
       }
     }
 
@@ -4170,7 +4204,7 @@
     panel.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 12px;">Discogs Helper Debug</h3>
         <div id="debug-config-info">
-          <div><b>Version:</b> 11.1</div>
+          <div><b>Version:</b> 11.2</div>
           <div><b>API:</b> Always Enabled</div>
           <div><b>Token:</b> ${config.token.substring(
             0,
