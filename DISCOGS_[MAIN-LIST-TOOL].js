@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Discogs Listing Helper v11.2 - Goldmine Pricing
+// @name         Discogs Listing Helper v11.3 - Goldmine Pricing
 // @namespace    http://tampermonkey.net/
-// @version      11.2
+// @version      11.3
 // @description  Debug version to troubleshoot listing details display issue.
 // @author       rova_records
 // @match        https://www.discogs.com/sell/post/*
@@ -32,9 +32,9 @@
     }
   }
 
-  debugLog("Script initialized - Version 11.2");
+  debugLog("Script initialized - Version 11.3");
   debugLog(
-    'Changes: Simplified pricing - removed grade labels, showing psychological price range (.99, .49) from suggested to degraded minimum.'
+    'Changes: Fixed NM condition matching (removed broken M- pattern), added .49 psychological pricing, improved fallback labeling for no exact matches.'
   );
 
   const grades = ["P", "F", "G", "G+", "VG", "VG+", "NM", "M"];
@@ -141,10 +141,12 @@
       return 0.79;
     }
 
-    // For all prices, use .79 instead of .49 for better competitiveness
+    // Check psychological price points: .49, .79, .99
     for (let i = floor; i >= 0; i--) {
+      const p49 = i + 0.49;
       const p79 = i + 0.79;
       const p99 = i + 0.99;
+      if (p49 < price) candidates.push(p49);
       if (p79 < price) candidates.push(p79);
       if (p99 < price) candidates.push(p99);
       if (candidates.length) break;
@@ -388,6 +390,7 @@
     let useMediaOnlyFallback = false;
     let useBetterSleevePricing = false;
     let useBetterConditionPricing = false;
+    let useEmergencyFallback = false;
     let matchingPrices = [];
     let matchingListings = 0;
     let pricingStrategy = "";
@@ -536,6 +539,7 @@
       useMediaOnlyFallback,
       useBetterSleevePricing,
       useBetterConditionPricing,
+      useEmergencyFallback,
       pricingStrategy,
       mode,
     };
@@ -817,10 +821,9 @@
           // IMPROVED CONDITION MATCHING - More precise and reliable
           // Special handling for Near Mint which can appear as "NM or M-"
           if (mediaCode === "NM or M-") {
-            // Look for NM, M-, or "NM or M-" patterns
+            // Look for NM or "NM or M-" patterns
             const nmPatterns = [
               /\bNM\b(?![+])/i, // NM but not NM+
-              /\bM-\b/i,
               /\bNM\s*or\s*M-\b/i,
               /\bNear\s*Mint\b/i,
             ];
@@ -923,7 +926,6 @@
             if (sleeveCode === "NM or M-") {
               const nmPatterns = [
                 /\bNM\b(?![+])/i, // NM but not NM+
-                /\bM-\b/i,
                 /\bNM\s*or\s*M-\b/i,
                 /\bNear\s*Mint\b/i,
               ];
@@ -983,7 +985,6 @@
             if (sleeveCode === "NM or M-") {
               const nmPatterns = [
                 /\bNM\b(?![+])/i, // NM but not NM+
-                /\bM-\b/i,
                 /\bNM\s*or\s*M-\b/i,
                 /\bNear\s*Mint\b/i,
               ];
@@ -1053,7 +1054,6 @@
                 /\bNear\s*Mint\s*\(NM\s*or\s*M-\)/i,
                 /\bNear\s*Mint\b/i,
                 /\bNM\b(?![+])/i, // NM but not NM+
-                /\bM-\b/i,
               ],
             },
             {
@@ -1394,6 +1394,7 @@
         let useMediaOnlyFallback = false;
         let useBetterSleevePricing = false;
         let useBetterConditionPricing = false;
+        let useEmergencyFallback = false;
         let matchingPrices = [];
         let matchingListings = 0;
         let pricingStrategy = "";
@@ -1549,7 +1550,8 @@
             );
             matchingPrices = allUSAPrices;
             matchingListings = allUSAPrices.length;
-            pricingStrategy = "emergency fallback (any USA listing)";
+            useEmergencyFallback = true;
+            pricingStrategy = "reference-available";
           } else {
             debugLogError("No USA listings found at all!");
             pricingStrategy = "no-comps";
@@ -1605,6 +1607,7 @@
           useMediaOnlyFallback,
           useBetterSleevePricing,
           useBetterConditionPricing,
+          useEmergencyFallback,
           pricingStrategy,
           minListing: listingDetailsMap[min] || null,
           selectedMediaCondition: mediaCondition,
@@ -2454,7 +2457,9 @@
       color: "#6c757d",
       marginBottom: "5px",
     });
-    const conditionText = data.useBetterConditionPricing
+    const conditionText = data.useEmergencyFallback
+      ? "available listings (reference - mixed conditions)"
+      : data.useBetterConditionPricing
       ? "better media condition"
       : "same media condition";
     statsRow.innerHTML = `
@@ -4204,7 +4209,7 @@
     panel.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 12px;">Discogs Helper Debug</h3>
         <div id="debug-config-info">
-          <div><b>Version:</b> 11.2</div>
+          <div><b>Version:</b> 11.3</div>
           <div><b>API:</b> Always Enabled</div>
           <div><b>Token:</b> ${config.token.substring(
             0,
