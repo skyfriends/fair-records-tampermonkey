@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Discogs Listing Helper v11.3 - Goldmine Pricing
+// @name         Discogs Listing Helper v11.4 - Goldmine Pricing
 // @namespace    http://tampermonkey.net/
-// @version      11.3
+// @version      11.4
 // @description  Debug version to troubleshoot listing details display issue.
 // @author       rova_records
 // @match        https://www.discogs.com/sell/post/*
@@ -32,9 +32,9 @@
     }
   }
 
-  debugLog("Script initialized - Version 11.3");
+  debugLog("Script initialized - Version 11.4");
   debugLog(
-    'Changes: Fixed NM condition matching (removed broken M- pattern), added .49 psychological pricing, improved fallback labeling for no exact matches.'
+    'Changes: Fixed NM condition matching (removed broken M- pattern), improved fallback labeling for no exact matches.'
   );
 
   const grades = ["P", "F", "G", "G+", "VG", "VG+", "NM", "M"];
@@ -141,12 +141,10 @@
       return 0.79;
     }
 
-    // Check psychological price points: .49, .79, .99
+    // Check psychological price points: .79, .99
     for (let i = floor; i >= 0; i--) {
-      const p49 = i + 0.49;
       const p79 = i + 0.79;
       const p99 = i + 0.99;
-      if (p49 < price) candidates.push(p49);
       if (p79 < price) candidates.push(p79);
       if (p99 < price) candidates.push(p99);
       if (candidates.length) break;
@@ -3598,7 +3596,7 @@
       `;
     leftContainer.appendChild(
       createCollapsibleBox(
-        "🎵 Record Mode (v11.3)",
+        "🎵 Record Mode (v11.4)",
         modeToggleDiv,
         false,
         "mode-toggle-box"
@@ -4209,7 +4207,7 @@
     panel.innerHTML = `
         <h3 style="margin: 0 0 5px 0; font-size: 12px;">Discogs Helper Debug</h3>
         <div id="debug-config-info">
-          <div><b>Version:</b> 11.3</div>
+          <div><b>Version:</b> 11.4</div>
           <div><b>API:</b> Always Enabled</div>
           <div><b>Token:</b> ${config.token.substring(
             0,
