@@ -3598,7 +3598,7 @@
       `;
     leftContainer.appendChild(
       createCollapsibleBox(
-        "🎵 Record Mode (v11.1)",
+        "🎵 Record Mode (v11.3)",
         modeToggleDiv,
         false,
         "mode-toggle-box"
